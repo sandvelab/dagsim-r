@@ -1,0 +1,27 @@
+library(R6)
+
+MyClass <- R6Class(
+  "MyClass",
+  
+  public = list(
+    func = NULL,
+    func_name = NULL,
+    
+    initialize = function(func) {
+      self$func <- func
+      self$func_name <- deparse(substitute(func))
+    },
+    
+    print_func_name = function() {
+      cat("Function name:", self$func_name, "\n")
+    }
+  )
+)
+
+# Example usage
+my_function <- function(x) {
+  return(x^2)
+}
+
+obj <- MyClass$new(func = my_function)
+obj$print_func_name()  # This will print "my_function"

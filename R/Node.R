@@ -17,7 +17,9 @@ NodeBase <- R6Class(
 
     output = NULL,
 
-    initialize = function(name, func, func_name, plates = list(), observed = TRUE, args = list(), kwargs = list(), visible = TRUE) {
+    initialize = function(name, func, func_name, plates = list(),
+                          observed = TRUE, args = list(), kwargs = list(),
+                          visible = TRUE) {
       # Ensure empty list if NULL provided
       if (is.null(plates)) plates <- list()
       if (is.null(args)) args <- list()
@@ -31,7 +33,8 @@ NodeBase <- R6Class(
       self$kwargs <- kwargs
       self$observed <- observed
 
-      # Convert args and kwargs into functions that can dynamically fetch the outputs of other nodes
+      # Convert args and kwargs into functions that can dynamically fetch
+      # the outputs of other nodes
       self$arg_getters <- lapply(args, function(arg) {
         if (inherits(arg, "NodeBase")) {
           function(index) arg$output[[index]]
@@ -60,11 +63,11 @@ NodeBase <- R6Class(
     },
 
     get_args = function(index) {
-      return(lapply(self$arg_getters, function(a) a(index)))
+      lapply(self$arg_getters, function(a) a(index))
     },
 
     get_kwargs = function(index) {
-      return(lapply(self$kwarg_getters, function(v) v(index)))
+      lapply(self$kwarg_getters, function(v) v(index))
     },
 
     forward = function(idx) {
@@ -81,7 +84,8 @@ NodeBase <- R6Class(
       cat("  Type: ", class(self)[1], "\n")
       cat("  Function: ", self$func_name, "\n")
       if (length(self$parents) > 0) {
-        cat("  Parents: ", paste(sapply(self$parents, function(p) p$name), collapse = ", "), "\n")
+        cat("  Parents: ", paste(sapply(self$parents, function(p) p$name),
+                                 collapse = ", "), "\n")
       } else {
         cat("  Parents: None\n")
       }
@@ -96,9 +100,13 @@ Node <- R6Class(
     handle_multi_cols = FALSE,
     handle_multi_return = NULL,
 
-    initialize = function(name, func, args = NULL, kwargs = NULL, plates = NULL, size_field = NULL,
-                          observed = TRUE, visible = TRUE, handle_multi_cols = FALSE, handle_multi_return = NULL) {
-      super$initialize(name, func, func_name = deparse(substitute(func)),  plates = plates, observed = observed, args = args, kwargs = kwargs, visible = visible)
+    initialize = function(name, func, args = NULL, kwargs = NULL, plates = NULL,
+                          size_field = NULL, observed = TRUE, visible = TRUE,
+                          handle_multi_cols = FALSE,
+                          handle_multi_return = NULL) {
+      super$initialize(name, func, func_name = deparse(substitute(func)),
+                       plates = plates, observed = observed, args = args,
+                       kwargs = kwargs, visible = visible)
       self$handle_multi_cols <- handle_multi_cols
       self$handle_multi_return <- handle_multi_return
     },

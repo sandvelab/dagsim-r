@@ -4,7 +4,7 @@ Graph <- R6Class(
     name = NULL,
     nodes = NULL,
     plates = NULL,
-    adj_mat = NULL,
+    adj_matrix = NULL,
     top_order = NULL,
     folded_dot_str = NULL,
     unfolded_dot_str = NULL,
@@ -14,7 +14,7 @@ Graph <- R6Class(
       self$name <- name
       self$nodes <- list_nodes
       self$plates <- list()
-      self$adj_mat <- data.frame()
+      self$adj_matrix <- data.frame()
       self$top_order <- character()
       self$update_topol_order()
       self$update_plate_embedding()
@@ -25,6 +25,7 @@ Graph <- R6Class(
       }
     },
 
+    #TO DO: check
     unfold_graph = function(reps) {
       removed_nodes <- self$replicate_nodes(reps)
       self$update_topol_order()
@@ -43,6 +44,7 @@ Graph <- R6Class(
       }
     },
 
+    #TO DO: check
     get_nodes_to_aggregate = function() {
       nodes_to_aggregate <- list()
       for (node in self$nodes) {
@@ -57,6 +59,7 @@ Graph <- R6Class(
       return(nodes_to_aggregate)
     },
 
+    #TO DO: check
     replicate_nodes = function(plates_reps) {
       parents_to_aggregate <- self$get_nodes_to_aggregate()
       nodes_to_remove <- list()
@@ -80,6 +83,7 @@ Graph <- R6Class(
       return(removed_nodes_names)
     },
 
+    #TO DO: check
     update_plate_embedding = function() {
       plateDict <- list()
       plateDict[[1]] <- list(NULL, list())  # Equivalent to list(0 = list(NULL, list())) in the original intent
@@ -105,40 +109,16 @@ Graph <- R6Class(
       self$plates <- plateDict
     },
 
-    add_node = function(node) {
-      if (!(node %in% self$nodes)) {
-        self$nodes <- c(self$nodes, node)
-      }
-      self$update_topol_order()
-    },
-
-    get_selection = function() {
-      check_for_selection <- Filter(function(item) inherits(item, "Selection"), self$nodes)
-      if (length(check_for_selection) > 0) {
-        return(which(sapply(self$nodes, identical, check_for_selection[[1]])))
+    get_node_by_class = function(class_name) {
+      check_for_node <- Filter(function(item) inherits(item, class_name), self$nodes)
+      if (length(check_for_node) > 0) {
+        return(which(sapply(self$nodes, identical, check_for_node[[1]])))
       } else {
         return(NULL)
       }
     },
 
-    get_stratify = function() {
-      check_for_stratify <- Filter(function(item) inherits(item, "Stratify"), self$nodes)
-      if (length(check_for_stratify) > 0) {
-        return(which(sapply(self$nodes, identical, check_for_stratify[[1]])))
-      } else {
-        return(NULL)
-      }
-    },
-
-    get_missing = function() {
-      check_for_missing <- Filter(function(item) inherits(item, "Missing"), self$nodes)
-      if (length(check_for_missing) > 0) {
-        return(check_for_missing)
-      } else {
-        return(NULL)
-      }
-    },
-
+    #TO DO: check
     get_node_by_name = function(name) {
       if (!is.character(name)) {
         return(NULL)
@@ -153,26 +133,29 @@ Graph <- R6Class(
       }
     },
 
-    update_adj_mat = function() {
+    #TO DO: check
+    update_adj_matrix = function() {
       nodes_names <- sapply(self$nodes, function(node) node$name)
       matrix <- as.data.frame(matrix(0, nrow = length(self$nodes), ncol = length(self$nodes), dimnames = list(nodes_names, nodes_names)))
 
       for (node in self$nodes) {
         if (!is.null(node$parents)) {
           for (parent in node$parents) {
-            matrix[node$name, parent$name] <- 1
+            matrix[parent$name, node$name] <- 1
           }
         }
       }
-      self$adj_mat <- matrix
+      self$adj_matrix <- matrix
     },
 
+    #TO DO: check
     update_topol_order = function() {
-      self$update_adj_mat()
-      G <- igraph::graph_from_adjacency_matrix(as.matrix(self$adj_mat), mode = "directed")
+      self$update_adj_matrix()
+      G <- igraph::graph_from_adjacency_matrix(as.matrix(self$adj_matrix), mode = "directed")
       self$top_order <- names(igraph::topo_sort(G))
     },
 
+    #TO DO: check
     generate_dot = function() {
       shape_dict <- list(Node = "ellipse", Selection = "doublecircle", Stratify = "doubleoctagon", Missing = "Mcircle")
       dot_str <- "digraph G{\n"
@@ -184,10 +167,10 @@ Graph <- R6Class(
         }
       }
 
-      for (parent_node in colnames(self$adj_mat)) {
+      for (parent_node in colnames(self$adj_matrix)) {
         if (self$get_node_by_name(parent_node)$visible) {
-          for (node_idx in rownames(self$adj_mat)) {
-            if (self$adj_mat[node_idx, parent_node] == 1 && self$get_node_by_name(node_idx)$visible) {
+          for (node_idx in rownames(self$adj_matrix)) {
+            if (self$adj_matrix[node_idx, parent_node] == 1 && self$get_node_by_name(node_idx)$visible) {
               tmp_str <- sprintf('"%s" -> "%s";\n', parent_node, node_idx)
               dot_str <- paste0(dot_str, tmp_str)
             }
@@ -203,6 +186,7 @@ Graph <- R6Class(
       return(dot_str)
     },
 
+    #TO DO: check
     draw = function(folded = TRUE) {
       dot_str <- if (folded) self$folded_dot_str else self$unfolded_dot_str
       writeLines(dot_str, paste0(self$name, "_DOT.txt"))
@@ -210,6 +194,7 @@ Graph <- R6Class(
       plot(s)  # Assumes an R function to plot Graphviz DOT files
     },
 
+    #TO DO: check
     simulate = function(num_samples, csv_name = "", output_path = "./", selection = TRUE, stratify = TRUE, missing = TRUE) {
       # Ensure output path ends with a slash
       if (substr(output_path, nchar(output_path), nchar(output_path)) != "/") {
@@ -224,7 +209,7 @@ Graph <- R6Class(
       output_dict <- self$traverse_graph(num_samples, output_path, missing, TRUE)
 
       # Handle selection bias if selection is TRUE
-      selectionNode <- self$get_selection()
+      selectionNode <- self$get_node_by_class("Selection")
       if (selection && !is.null(selectionNode)) {
         cat(format(Sys.time(), "%Y-%m-%d %H:%M:%S"), ": Simulating selection bias.\n")
         output_dict <- self$nodes[[selectionNode]]$filter_output(output_dict)
@@ -244,7 +229,7 @@ Graph <- R6Class(
       output_dict <- self$prettify_output(output_dict)
 
       # Handle stratification if stratify is TRUE
-      stratifyNode <- self$get_stratify()
+      stratifyNode <- self$get_node_by_class("Stratify")
       if (stratify && !is.null(stratifyNode)) {
         cat(format(Sys.time(), "%Y-%m-%d %H:%M:%S"), ": Stratifying the data.\n")
         output_dict <- self$nodes[[stratifyNode]]$filter_output(output_dict)
@@ -271,6 +256,7 @@ Graph <- R6Class(
       return(output_dict)
     },
 
+    #TO DO: check
     traverse_graph = function(num_samples, output_path, missing, show_log) {
       output_dict <- list()
 
@@ -281,7 +267,7 @@ Graph <- R6Class(
           cat(format(Sys.time(), "%Y-%m-%d %H:%M:%S"), ": Simulating node \"", node$name, "\".\n", sep = "")
         }
 
-        node$node_simulate(num_samples, output_path)
+        node$node_simulate(num_samples)
 
         if (inherits(node, "Selection")) {
           stopifnot(all(sapply(node$output, is.logical)), "The selection node's function should return a boolean")
@@ -298,6 +284,7 @@ Graph <- R6Class(
       return(output_dict)
     },
 
+    #TO DO: check
     prettify_output = function(output_dict) {
       keys_to_remove <- character()
 
@@ -330,6 +317,7 @@ Graph <- R6Class(
       return(output_dict)
     },
 
+    #TO DO: check
     vec2dict = function(key, node_output) {
       num_reps <- length(node_output[[1]])
       node_dict <- setNames(vector("list", num_reps), paste0(key, "_", seq_len(num_reps) - 1))
@@ -344,6 +332,7 @@ Graph <- R6Class(
       return(node_dict)
     },
 
+    #TO DO: check
     ml_simulation = function(num_samples, train_test_ratio, stratify = FALSE, include_external = FALSE, csv_prefix = "") {
       if (csv_prefix != "") {
         csv_prefix <- paste0(csv_prefix, "_")
@@ -365,6 +354,7 @@ Graph <- R6Class(
       return(output)
     },
 
+    #TO DO: check
     update_nodes = function(removed_nodes) {
       # Update the constructors of the nodes to include the new parents
       for (child_name in self$top_order) {
@@ -392,6 +382,7 @@ Graph <- R6Class(
       }
     },
 
+    #TO DO: check
     get_parent_usage = function(child, parent) {
       if (parent %in% child$constructor$args) {
         ind <- which(sapply(child$constructor$args, identical, parent))
@@ -408,6 +399,7 @@ Graph <- R6Class(
       return(tuple_usage)
     },
 
+    #TO DO: check
     match_parents = function(child, parent, usage) {
       replica_index <- tail(strsplit(child$name, "_")[[1]], 2)[1]
 
@@ -418,6 +410,7 @@ Graph <- R6Class(
       }
     },
 
+    #TO DO: check
     assign_parent_to_child = function(child, parent, usage, agg = 1) {
       parent_name <- if (agg == 1) paste0(parent$name, "_agg") else parent$name
 

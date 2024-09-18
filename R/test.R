@@ -4,7 +4,6 @@ source("R/Node.R")
 source("R/Graph.R")
 
 # Simulate one node ----
-
 sample_function <- function(x, y) {
   return(x + y)
 }
@@ -22,4 +21,7 @@ node_c <- Node$new(name = "C", func = function(a, b) b - a, args = list(node_b),
 node_a$node_simulate(10)
 node_b$node_simulate(10)
 node_c$node_simulate(10)
-print(node_c$output)
+
+graph <- Graph$new(list(node_a, node_b, node_c))
+output <- graph$simulate(num_samples = 9)
+output

@@ -5,7 +5,7 @@ Graph <- R6Class(
     nodes = NULL,
     plates = NULL,
     adj_matrix = NULL,
-    top_order = NULL,
+    topol_order = NULL,
     folded_dot_str = NULL,
     unfolded_dot_str = NULL,
 
@@ -15,7 +15,7 @@ Graph <- R6Class(
       self$nodes <- list_nodes
       self$plates <- list()
       self$adj_matrix <- data.frame()
-      self$top_order <- character()
+      self$topol_order <- character()
       self$update_topol_order()
       self$update_plate_embedding()
       self$folded_dot_str <- self$generate_dot()
@@ -25,7 +25,7 @@ Graph <- R6Class(
       }
     },
 
-    #TO DO: check
+    #TO DO: check plates related
     unfold_graph = function(reps) {
       removed_nodes <- self$replicate_nodes(reps)
       self$update_topol_order()
@@ -44,71 +44,6 @@ Graph <- R6Class(
       }
     },
 
-    #TO DO: check
-    get_nodes_to_aggregate = function() {
-      nodes_to_aggregate <- list()
-      for (node in self$nodes) {
-        for (parent in node$parents) {
-          node_plates <- unique(node$plates)
-          parent_plates <- unique(parent$plates)
-          if (length(intersect(node_plates, parent_plates)) == 0) {
-            nodes_to_aggregate <- c(nodes_to_aggregate, parent)
-          }
-        }
-      }
-      return(nodes_to_aggregate)
-    },
-
-    #TO DO: check
-    replicate_nodes = function(plates_reps) {
-      parents_to_aggregate <- self$get_nodes_to_aggregate()
-      nodes_to_remove <- list()
-      new_nodes <- list()
-
-      for (node in self$nodes) {
-        if (length(node$plates) > 0) {
-          nodes_to_remove <- c(nodes_to_remove, node)
-          node_replicas <- lapply(1:plates_reps[[node$plates[[1]]]], function(x) node$clone(deep = TRUE))
-          new_nodes <- c(new_nodes, node_replicas)
-          for (i in seq_along(node_replicas)) {
-            node_replicas[[i]]$name <- paste0(node$name, "_", i, "_")
-          }
-          if (node %in% parents_to_aggregate) {
-            new_nodes <- c(new_nodes, Node$new(name = paste0(node$name, "_agg"), func = function(...) list(...), args = node_replicas, observed = FALSE))
-          }
-        }
-      }
-      self$nodes <- setdiff(c(self$nodes, new_nodes), nodes_to_remove)
-      removed_nodes_names <- sapply(nodes_to_remove, function(x) x$name)
-      return(removed_nodes_names)
-    },
-
-    #TO DO: check
-    update_plate_embedding = function() {
-      plateDict <- list()
-      plateDict[[1]] <- list(NULL, list())  # Equivalent to list(0 = list(NULL, list())) in the original intent
-      idx <- 2  # Start index from 2 because 1 is used for the initial NULL plate
-      labels <- character()
-
-      for (node in self$nodes) {
-        if (length(node$plates) > 0) {
-          for (label in node$plates) {
-            if (!(label %in% labels)) {
-              plateDict[[idx]] <- list(label, list())
-              labels <- c(labels, label)
-              idx <- idx + 1
-            }
-            label_index <- which(sapply(plateDict, function(x) x[[1]] == label))
-            plateDict[[label_index]][[2]] <- c(plateDict[[label_index]][[2]], node$name)
-          }
-        } else {
-          plateDict[[1]][[2]] <- c(plateDict[[1]][[2]], node$name)
-        }
-      }
-
-      self$plates <- plateDict
-    },
-
     get_node_by_class = function(class_name) {
       check_for_node <- Filter(function(item) inherits(item, class_name), self$nodes)
       if (length(check_for_node) > 0) {
@@ -118,14 +53,13 @@ Graph <- R6Class(
       }
     },
 
-    #TO DO: check
     get_node_by_name = function(name) {
       if (!is.character(name)) {
         return(NULL)
       } else {
         node <- Filter(function(item) item$name == name, self$nodes)
         if (length(node) == 0) {
-          message(name, " not found")
+          message("Node ", name, " not found.")
           return(NULL)
         } else {
           return(node[[1]])
@@ -133,26 +67,22 @@ Graph <- R6Class(
       }
     },
 
-    #TO DO: check
     update_adj_matrix = function() {
       nodes_names <- sapply(self$nodes, function(node) node$name)
       matrix <- as.data.frame(matrix(0, nrow = length(self$nodes), ncol = length(self$nodes), dimnames = list(nodes_names, nodes_names)))
 
       for (node in self$nodes) {
-        if (!is.null(node$parents)) {
-          for (parent in node$parents) {
-            matrix[parent$name, node$name] <- 1
-          }
+        for (parent in node$parents) {
+          matrix[parent$name, node$name] <- 1
         }
       }
       self$adj_matrix <- matrix
     },
 
-    #TO DO: check
     update_topol_order = function() {
       self$update_adj_matrix()
-      G <- igraph::graph_from_adjacency_matrix(as.matrix(self$adj_matrix), mode = "directed")
-      self$top_order <- names(igraph::topo_sort(G))
+      igraph_obj <- igraph::graph_from_adjacency_matrix(as.matrix(self$adj_matrix), mode = "directed")
+      self$topol_order <- names(igraph::topo_sort(igraph_obj))
     },
 
     #TO DO: check
@@ -260,7 +190,7 @@ Graph <- R6Class(
     traverse_graph = function(num_samples, output_path, missing, show_log) {
       output_dict <- list()
 
-      for (node_name in self$top_order) {
+      for (node_name in self$topol_order) {
         node <- self$get_node_by_name(node_name)
 
         if (show_log && (inherits(node, "Missing") || inherits(node, "Node"))) {
@@ -357,7 +287,7 @@ Graph <- R6Class(
     #TO DO: check
     update_nodes = function(removed_nodes) {
       # Update the constructors of the nodes to include the new parents
-      for (child_name in self$top_order) {
+      for (child_name in self$topol_order) {
         child <- self$get_node_by_name(child_name)
 
         for (parent in child$parents) {
@@ -419,6 +349,71 @@ Graph <- R6Class(
       } else {  # if in kwargs
         child$constructor$kwargs[[usage[[1]]]] <- self$get_node_by_name(parent_name)
       }
+    },
+
+    #TO DO: check plates related
+    get_nodes_to_aggregate = function() {
+      nodes_to_aggregate <- list()
+      for (node in self$nodes) {
+        for (parent in node$parents) {
+          node_plates <- unique(node$plates)
+          parent_plates <- unique(parent$plates)
+          if (length(intersect(node_plates, parent_plates)) == 0) {
+            nodes_to_aggregate <- c(nodes_to_aggregate, parent)
+          }
+        }
+      }
+      return(nodes_to_aggregate)
+    },
+
+    #TO DO: check plates related
+    replicate_nodes = function(plates_reps) {
+      parents_to_aggregate <- self$get_nodes_to_aggregate()
+      nodes_to_remove <- list()
+      new_nodes <- list()
+
+      for (node in self$nodes) {
+        if (length(node$plates) > 0) {
+          nodes_to_remove <- c(nodes_to_remove, node)
+          node_replicas <- lapply(1:plates_reps[[node$plates[[1]]]], function(x) node$clone(deep = TRUE))
+          new_nodes <- c(new_nodes, node_replicas)
+          for (i in seq_along(node_replicas)) {
+            node_replicas[[i]]$name <- paste0(node$name, "_", i, "_")
+          }
+          if (node %in% parents_to_aggregate) {
+            new_nodes <- c(new_nodes, Node$new(name = paste0(node$name, "_agg"), func = function(...) list(...), args = node_replicas, observed = FALSE))
+          }
+        }
+      }
+      self$nodes <- setdiff(c(self$nodes, new_nodes), nodes_to_remove)
+      removed_nodes_names <- sapply(nodes_to_remove, function(x) x$name)
+      return(removed_nodes_names)
+    },
+
+    #TO DO: check plates related
+    update_plate_embedding = function() {
+      plateDict <- list()
+      plateDict[[1]] <- list(NULL, list())  # Equivalent to list(0 = list(NULL, list())) in the original intent
+      idx <- 2  # Start index from 2 because 1 is used for the initial NULL plate
+      labels <- character()
+
+      for (node in self$nodes) {
+        if (length(node$plates) > 0) {
+          for (label in node$plates) {
+            if (!(label %in% labels)) {
+              plateDict[[idx]] <- list(label, list())
+              labels <- c(labels, label)
+              idx <- idx + 1
+            }
+            label_index <- which(sapply(plateDict, function(x) x[[1]] == label))
+            plateDict[[label_index]][[2]] <- c(plateDict[[label_index]][[2]], node$name)
+          }
+        } else {
+          plateDict[[1]][[2]] <- c(plateDict[[1]][[2]], node$name)
+        }
+      }
+
+      self$plates <- plateDict
     }
   )
 )

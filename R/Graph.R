@@ -97,20 +97,21 @@ Graph <- R6Class(
         }
       }
 
-      for (parent_node in colnames(self$adj_matrix)) {
+      for (parent_node in rownames(self$adj_matrix)) {
         if (self$get_node_by_name(parent_node)$visible) {
-          for (node_idx in rownames(self$adj_matrix)) {
-            if (self$adj_matrix[node_idx, parent_node] == 1 && self$get_node_by_name(node_idx)$visible) {
-              tmp_str <- sprintf('"%s" -> "%s";\n', parent_node, node_idx)
-              dot_str <- paste0(dot_str, tmp_str)
+          for (child_node in colnames(self$adj_matrix)) {
+            if (self$adj_matrix[parent_node, child_node] == 1 && self$get_node_by_name(child_node)$visible) {
+              relation_str <- sprintf('"%s" -> "%s";\n', parent_node, child_node)
+              dot_str <- paste0(dot_str, relation_str)
             }
           }
         }
       }
 
-      if (length(self$plates) > 1) {
-        dot_str <- paste0(dot_str, get_plate_dot(self$plates))  # Assuming you have an R equivalent for get_plate_dot
-      }
+      #TO DO: Add when plates are supported
+      #if (length(self$plates) > 1) {
+      #  dot_str <- paste0(dot_str, get_plate_dot(self$plates))  # Assuming you have an R equivalent for get_plate_dot
+      #}
 
       dot_str <- paste0(dot_str, "}")
       return(dot_str)

@@ -1,4 +1,4 @@
-Graph <- R6Class(
+Graph <- R6::R6Class(
   "Graph",
   public = list(
     name = NULL,
@@ -120,7 +120,7 @@ Graph <- R6Class(
     #TO DO: add option to save only when needed and support different output paths
     draw = function(folded = TRUE) {
       dot_str <- if (folded) self$folded_dot_str else self$unfolded_dot_str
-      writeLines(dot_str, paste0(self$name, "_DOT.txt"))
+      writeLines(dot_str, paste0(self$name, ".txt"))
       graphviz_obj <- DiagrammeR::grViz(dot_str)
       print(graphviz_obj)
       svg_obj <- DiagrammeRsvg::export_svg(graphviz_obj)
@@ -156,6 +156,7 @@ Graph <- R6Class(
     },
 
     #TO DO: ensure correct execution of Selection, Missing, Stratify nodes
+    #TO DO: handle arrays
     simulate = function(num_samples, save = FALSE, csv_name = "", output_path = "./", selection = TRUE, stratify = TRUE, missing = TRUE) {
       # Start timing
       tic <- Sys.time()
@@ -224,7 +225,7 @@ Graph <- R6Class(
       return(output_dict)
     },
 
-    #TO DO: check
+    #TO DO: handle arrays
     prettify_output = function(output_dict) {
       keys_to_remove <- character()
 
@@ -257,7 +258,7 @@ Graph <- R6Class(
       return(output_dict)
     },
 
-    #TO DO: check
+    #TO DO: handle arrays
     vec2dict = function(key, node_output) {
       num_reps <- length(node_output[[1]])
       node_dict <- setNames(vector("list", num_reps), paste0(key, "_", seq_len(num_reps) - 1))

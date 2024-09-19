@@ -1,6 +1,4 @@
-library(R6)
-
-NodeBase <- R6Class(
+NodeBase <- R6::R6Class(
   "NodeBase",
   public = list(
     name = NULL,
@@ -93,7 +91,7 @@ NodeBase <- R6Class(
   )
 )
 
-Node <- R6Class(
+Node <- R6::R6Class(
   "Node",
   inherit = NodeBase,
   public = list(

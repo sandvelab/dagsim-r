@@ -85,7 +85,6 @@ Graph <- R6Class(
       self$topol_order <- names(igraph::topo_sort(igraph_obj))
     },
 
-    #TO DO: check
     generate_dot = function() {
       shape_dict <- list(Node = "ellipse", Selection = "doublecircle", Stratify = "doubleoctagon", Missing = "Mcircle")
       dot_str <- "digraph G{\n"
@@ -117,12 +116,13 @@ Graph <- R6Class(
       return(dot_str)
     },
 
-    #TO DO: check
+    #TO DO: unfolded_dot_str is not yet supported. Add it when u add plates support.
     draw = function(folded = TRUE) {
       dot_str <- if (folded) self$folded_dot_str else self$unfolded_dot_str
       writeLines(dot_str, paste0(self$name, "_DOT.txt"))
-      s <- igraph::graph_from_dot(dot_str)
-      plot(s)  # Assumes an R function to plot Graphviz DOT files
+      graphviz_obj <- DiagrammeR::grViz(dot_str)
+      svg_obj <- DiagrammeRsvg::export_svg(graphviz_obj)
+      rsvg::rsvg_png(charToRaw(svg_obj), file = paste0(self$name, ".png"))
     },
 
     #TO DO: check

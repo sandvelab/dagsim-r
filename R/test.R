@@ -24,3 +24,4 @@ node_c$node_simulate(10)
 
 graph <- Graph$new(list(node_a, node_b, node_c))
 output <- graph$simulate(num_samples = 9)
+graph$draw()

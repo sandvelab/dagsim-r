@@ -121,8 +121,37 @@ Graph <- R6Class(
       dot_str <- if (folded) self$folded_dot_str else self$unfolded_dot_str
       writeLines(dot_str, paste0(self$name, "_DOT.txt"))
       graphviz_obj <- DiagrammeR::grViz(dot_str)
+      print(graphviz_obj)
       svg_obj <- DiagrammeRsvg::export_svg(graphviz_obj)
       rsvg::rsvg_png(charToRaw(svg_obj), file = paste0(self$name, ".png"))
+    },
+
+    #TO DO: ensure correct execution of Selection, Missing, Stratify nodes
+    traverse_graph = function(num_samples, missing, show_log) {
+      output_dict <- list()
+
+      for (node_name in self$topol_order) {
+        node <- self$get_node_by_name(node_name)
+
+        if (show_log) {
+          cat(format(Sys.time(), "%Y-%m-%d %H:%M:%S"), ": Simulating node \"", node$name, "\".\n", sep = "")
+        }
+
+        node$node_simulate(num_samples)
+
+        if (inherits(node, "Selection")) {
+          stopifnot(all(sapply(node$output, is.logical)), "The selection node's function should return a boolean")
+        } else if (inherits(node, "Missing") && missing) {
+          stopifnot(all(sapply(node$index_node$output, is.logical)), "The index node's function should return a boolean")
+          output_dict[[node$name]] <- node$output
+        } else if (inherits(node, "Stratify")) {
+          stopifnot(all(sapply(node$output, is.character)), "The stratification node's function should return a string")
+        } else {
+          output_dict[[node$name]] <- node$output
+        }
+      }
+
+      return(output_dict)
     },
 
     #TO DO: check
@@ -137,7 +166,7 @@ Graph <- R6Class(
       cat(format(Sys.time(), "%Y-%m-%d %H:%M:%S"), ": Simulation started.\n")
 
       # Traverse the graph to generate initial output
-      output_dict <- self$traverse_graph(num_samples, output_path, missing, TRUE)
+      output_dict <- self$traverse_graph(num_samples, missing, TRUE)
 
       # Handle selection bias if selection is TRUE
       selectionNode <- self$get_node_by_class("Selection")
@@ -147,7 +176,7 @@ Graph <- R6Class(
 
         while (length(output_dict[[1]]) < num_samples) {
           temp_output <- self$nodes[[selectionNode]]$filter_output(
-            output_dict = self$traverse_graph(1, output_path, missing, FALSE)
+            output_dict = self$traverse_graph(1, missing, FALSE)
           )
           output_dict <- mapply(c, output_dict, temp_output, SIMPLIFY = FALSE)
         }
@@ -183,34 +212,6 @@ Graph <- R6Class(
       # End timing
       toc <- Sys.time()
       cat(format(Sys.time(), "%Y-%m-%d %H:%M:%S"), ": Simulation finished in ", round(difftime(toc, tic, units = "secs"), 4), " seconds.\n")
-
-      return(output_dict)
-    },
-
-    #TO DO: check
-    traverse_graph = function(num_samples, output_path, missing, show_log) {
-      output_dict <- list()
-
-      for (node_name in self$topol_order) {
-        node <- self$get_node_by_name(node_name)
-
-        if (show_log && (inherits(node, "Missing") || inherits(node, "Node"))) {
-          cat(format(Sys.time(), "%Y-%m-%d %H:%M:%S"), ": Simulating node \"", node$name, "\".\n", sep = "")
-        }
-
-        node$node_simulate(num_samples)
-
-        if (inherits(node, "Selection")) {
-          stopifnot(all(sapply(node$output, is.logical)), "The selection node's function should return a boolean")
-        } else if (inherits(node, "Missing") && missing) {
-          stopifnot(all(sapply(node$index_node$output, is.logical)), "The index node's function should return a boolean")
-          output_dict[[node$name]] <- node$output
-        } else if (inherits(node, "Stratify")) {
-          stopifnot(all(sapply(node$output, is.character)), "The stratification node's function should return a string")
-        } else {
-          output_dict[[node$name]] <- node$output
-        }
-      }
 
       return(output_dict)
     },

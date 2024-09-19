@@ -117,6 +117,7 @@ Graph <- R6Class(
     },
 
     #TO DO: unfolded_dot_str is not yet supported. Add it when u add plates support.
+    #TO DO: add option to save only when needed and support different output paths
     draw = function(folded = TRUE) {
       dot_str <- if (folded) self$folded_dot_str else self$unfolded_dot_str
       writeLines(dot_str, paste0(self$name, "_DOT.txt"))
@@ -154,13 +155,8 @@ Graph <- R6Class(
       return(output_dict)
     },
 
-    #TO DO: check
-    simulate = function(num_samples, csv_name = "", output_path = "./", selection = TRUE, stratify = TRUE, missing = TRUE) {
-      # Ensure output path ends with a slash
-      if (substr(output_path, nchar(output_path), nchar(output_path)) != "/") {
-        output_path <- paste0(output_path, "/")
-      }
-
+    #TO DO: ensure correct execution of Selection, Missing, Stratify nodes
+    simulate = function(num_samples, save = FALSE, csv_name = "", output_path = "./", selection = TRUE, stratify = TRUE, missing = TRUE) {
       # Start timing
       tic <- Sys.time()
       cat(format(Sys.time(), "%Y-%m-%d %H:%M:%S"), ": Simulation started.\n")
@@ -168,19 +164,19 @@ Graph <- R6Class(
       # Traverse the graph to generate initial output
       output_dict <- self$traverse_graph(num_samples, missing, TRUE)
 
-      # Handle selection bias if selection is TRUE
-      selectionNode <- self$get_node_by_class("Selection")
-      if (selection && !is.null(selectionNode)) {
-        cat(format(Sys.time(), "%Y-%m-%d %H:%M:%S"), ": Simulating selection bias.\n")
-        output_dict <- self$nodes[[selectionNode]]$filter_output(output_dict)
-
-        while (length(output_dict[[1]]) < num_samples) {
-          temp_output <- self$nodes[[selectionNode]]$filter_output(
-            output_dict = self$traverse_graph(1, missing, FALSE)
-          )
-          output_dict <- mapply(c, output_dict, temp_output, SIMPLIFY = FALSE)
-        }
-      }
+      # TO DO: Handle selection node
+      #selectionNode <- self$get_node_by_class("Selection")
+      #if (selection && !is.null(selectionNode)) {
+      #  cat(format(Sys.time(), "%Y-%m-%d %H:%M:%S"), ": Simulating selection bias.\n")
+      #  output_dict <- self$nodes[[selectionNode]]$filter_output(output_dict)
+      #
+      #  while (length(output_dict[[1]]) < num_samples) {
+      #    temp_output <- self$nodes[[selectionNode]]$filter_output(
+      #      output_dict = self$traverse_graph(1, missing, FALSE)
+      #    )
+      #    output_dict <- mapply(c, output_dict, temp_output, SIMPLIFY = FALSE)
+      #  }
+      #}
 
       # Filter the output_dict to only include observed nodes
       output_dict <- output_dict[sapply(names(output_dict), function(k) self$get_node_by_name(k)$observed)]
@@ -188,27 +184,39 @@ Graph <- R6Class(
       # Prettify the output
       output_dict <- self$prettify_output(output_dict)
 
-      # Handle stratification if stratify is TRUE
-      stratifyNode <- self$get_node_by_class("Stratify")
-      if (stratify && !is.null(stratifyNode)) {
-        cat(format(Sys.time(), "%Y-%m-%d %H:%M:%S"), ": Stratifying the data.\n")
-        output_dict <- self$nodes[[stratifyNode]]$filter_output(output_dict)
-      }
+      # TO DO: Handle stratification if stratify is TRUE
+      #stratifyNode <- self$get_node_by_class("Stratify")
+      #if (stratify && !is.null(stratifyNode)) {
+      #  cat(format(Sys.time(), "%Y-%m-%d %H:%M:%S"), ": Stratifying the data.\n")
+      #  output_dict <- self$nodes[[stratifyNode]]$filter_output(output_dict)
+      #}
 
-      # Save to CSV if csv_name is provided
-      if (csv_name != "") {
-        if (grepl("\\.csv$", csv_name)) {
-          csv_name <- sub("\\.csv$", "", csv_name)
-        }
-        if (!is.null(stratifyNode)) {
-          lapply(names(output_dict), function(key) {
-            write.csv(output_dict[[key]], file = paste0(output_path, csv_name, '_', key, '.csv'), row.names = FALSE)
-          })
+      if (save) {
+        if (csv_name == "") {
+          csv_name <- paste0(self$name, ".csv")
         } else {
-          write.csv(as.data.frame(output_dict), file = paste0(output_path, csv_name, '.csv'), row.names = FALSE)
+          if (!grepl("\\.csv$", csv_name)) {
+            csv_name <- paste0(csv_name, ".csv")
+          }
         }
+
+        if (!grepl("/$", output_path)) {
+          output_path <- paste0(output_path, "/")
+        }
+
+        #TO DO: fix when we have stratification
+        #if (!is.null(stratifyNode)) {
+        #  lapply(names(output_dict), function(key) {
+        #    write.csv(output_dict[[key]], file = paste0(output_path, sub("\\.csv$", "", csv_name), '_', key, '.csv'), row.names = FALSE)
+        #  })
+        #} else {
+          output_df <- data.frame(matrix(unlist(output_dict), nrow=length(output_dict[[1]]), byrow=FALSE))
+          colnames(output_df) <- names(output_dict)
+          write.csv(output_df, file = paste0(output_path, csv_name), row.names = FALSE)
+        # }
       }
 
+      print(output_dict)
       # End timing
       toc <- Sys.time()
       cat(format(Sys.time(), "%Y-%m-%d %H:%M:%S"), ": Simulation finished in ", round(difftime(toc, tic, units = "secs"), 4), " seconds.\n")

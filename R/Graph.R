@@ -272,7 +272,46 @@ Graph <- R6Class(
       return(node_dict)
     },
 
-    #TO DO: check
+    #TO DO: check plates related
+    get_parent_usage = function(child, parent) {
+      if (parent %in% child$constructor$args) {
+        ind <- which(sapply(child$constructor$args, identical, parent))
+        tuple_usage <- list(ind, "arg")
+      } else {
+        key <- names(child$constructor$kwargs)[sapply(child$constructor$kwargs, identical, parent)]
+        tuple_usage <- list(key, "kwarg")
+      }
+
+      if (is.null(tuple_usage)) {
+        stop(parent$name, " is not a parent of ", child$name)
+      }
+
+      return(tuple_usage)
+    },
+
+    #TO DO: check plates related
+    match_parents = function(child, parent, usage) {
+      replica_index <- tail(strsplit(child$name, "_")[[1]], 2)[1]
+
+      if (usage[[2]] == "arg") {
+        child$constructor$args[[usage[[1]]]] <- self$get_node_by_name(paste0(parent$name, "_", replica_index, "_"))
+      } else {  # if in kwargs
+        child$constructor$kwargs[[usage[[1]]]] <- self$get_node_by_name(paste0(parent$name, "_", replica_index, "_"))
+      }
+    },
+
+    #TO DO: check plates related
+    assign_parent_to_child = function(child, parent, usage, agg = 1) {
+      parent_name <- if (agg == 1) paste0(parent$name, "_agg") else parent$name
+
+      if (usage[[2]] == "arg") {
+        child$constructor$args[[usage[[1]]]] <- self$get_node_by_name(parent_name)
+      } else {  # if in kwargs
+        child$constructor$kwargs[[usage[[1]]]] <- self$get_node_by_name(parent_name)
+      }
+    },
+
+    #TO DO: check plates related
     update_nodes = function(removed_nodes) {
       # Update the constructors of the nodes to include the new parents
       for (child_name in self$topol_order) {
@@ -297,45 +336,6 @@ Graph <- R6Class(
         child$args <- child$parse_func_arguments()$args
         child$kwargs <- child$parse_func_arguments()$kwargs
         child$update_parents()
-      }
-    },
-
-    #TO DO: check
-    get_parent_usage = function(child, parent) {
-      if (parent %in% child$constructor$args) {
-        ind <- which(sapply(child$constructor$args, identical, parent))
-        tuple_usage <- list(ind, "arg")
-      } else {
-        key <- names(child$constructor$kwargs)[sapply(child$constructor$kwargs, identical, parent)]
-        tuple_usage <- list(key, "kwarg")
-      }
-
-      if (is.null(tuple_usage)) {
-        stop(parent$name, " is not a parent of ", child$name)
-      }
-
-      return(tuple_usage)
-    },
-
-    #TO DO: check
-    match_parents = function(child, parent, usage) {
-      replica_index <- tail(strsplit(child$name, "_")[[1]], 2)[1]
-
-      if (usage[[2]] == "arg") {
-        child$constructor$args[[usage[[1]]]] <- self$get_node_by_name(paste0(parent$name, "_", replica_index, "_"))
-      } else {  # if in kwargs
-        child$constructor$kwargs[[usage[[1]]]] <- self$get_node_by_name(paste0(parent$name, "_", replica_index, "_"))
-      }
-    },
-
-    #TO DO: check
-    assign_parent_to_child = function(child, parent, usage, agg = 1) {
-      parent_name <- if (agg == 1) paste0(parent$name, "_agg") else parent$name
-
-      if (usage[[2]] == "arg") {
-        child$constructor$args[[usage[[1]]]] <- self$get_node_by_name(parent_name)
-      } else {  # if in kwargs
-        child$constructor$kwargs[[usage[[1]]]] <- self$get_node_by_name(parent_name)
       }
     },
 

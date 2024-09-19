@@ -265,28 +265,6 @@ Graph <- R6Class(
     },
 
     #TO DO: check
-    ml_simulation = function(num_samples, train_test_ratio, stratify = FALSE, include_external = FALSE, csv_prefix = "") {
-      if (csv_prefix != "") {
-        csv_prefix <- paste0(csv_prefix, "_")
-      }
-
-      num_tr_samples <- as.integer(num_samples * train_test_ratio)
-      num_te_samples <- num_samples - num_tr_samples
-
-      train_dict <- self$simulate(num_samples = num_tr_samples, stratify = stratify, csv_name = paste0(csv_prefix, "train"))
-      test_dict <- self$simulate(num_samples = num_te_samples, stratify = stratify, csv_name = paste0(csv_prefix, "test"))
-
-      output <- list(train_dict, test_dict)
-
-      if (include_external) {
-        exter_dict <- self$simulate(num_samples = num_te_samples, stratify = stratify, selection = FALSE, csv_name = paste0(csv_prefix, "external"))
-        output <- c(output, list(exter_dict))
-      }
-
-      return(output)
-    },
-
-    #TO DO: check
     update_nodes = function(removed_nodes) {
       # Update the constructors of the nodes to include the new parents
       for (child_name in self$topol_order) {
